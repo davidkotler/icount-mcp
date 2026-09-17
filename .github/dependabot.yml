@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for routine patch/minor bumps; majors still come in alone.
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  # Action versions are a supply-chain surface of their own.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

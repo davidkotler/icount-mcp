@@ -1,0 +1,23 @@
+name: Feature request
+description: A tool or option the server should support.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do
+      description: The task, not the implementation.
+    validations:
+      required: true
+  - type: input
+    id: endpoint
+    attributes:
+      label: iCount API endpoint it would need, if you know it
+      placeholder: "client/create_or_update"
+  - type: checkboxes
+    id: roadmap
+    attributes:
+      label: Checked the roadmap
+      options:
+        - label: This is not already listed under "Roadmap / not yet implemented" in the README.
+          required: true

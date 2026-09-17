@@ -1,0 +1,13 @@
+# Every change to this repository requires review from the maintainer.
+# Enforced only when the `main` ruleset has "Require review from Code Owners"
+# enabled — see .github/rulesets/main.json.
+
+* @davidkotler
+
+# Extra-sensitive paths, called out so they are never rubber-stamped:
+# the API surface the model can call, the network/token handling, the
+# published-file list, and CI itself.
+/src/                 @davidkotler
+/.github/             @davidkotler
+/package.json         @davidkotler
+/SECURITY.md          @davidkotler

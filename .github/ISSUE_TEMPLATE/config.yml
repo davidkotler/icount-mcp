@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/davidkotler/icount-mcp/security/advisories/new
+    about: Report privately. Do not open a public issue.
+  - name: iCount API itself (not this server)
+    url: https://www.icount.co.il
+    about: This is an unofficial community integration. Account, billing, and API-permission questions go to iCount support.

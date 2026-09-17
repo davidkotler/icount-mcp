@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in the server behaves differently than documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste your API token, or a document/client dump that contains real
+        customer data.** Redact before posting. Security issues go to
+        [a private advisory](https://github.com/davidkotler/icount-mcp/security/advisories/new),
+        not here.
+  - type: input
+    id: version
+    attributes:
+      label: icount-mcp version
+      placeholder: "0.3.1"
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Node version, OS, and MCP client
+      placeholder: "Node 22.3 / Windows 11 / Claude Code"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Which tool was called, with what arguments, and what came back.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant stderr output
+      description: The server writes diagnostics to stderr. Redact the token first.
+      render: shell
