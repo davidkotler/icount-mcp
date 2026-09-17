@@ -80,3 +80,34 @@ gh api -X POST repos/davidkotler/icount-mcp/rulesets --input .github/rulesets/ma
 
 Re-applying creates a second ruleset — to change the existing one, `PUT` to
 `repos/davidkotler/icount-mcp/rulesets/<id>` instead.
+
+Two settings have no file form and must be toggled under **Settings → Code security**. Both are
+free on public repositories, and both are required for the
+[Skills IL verification checklist](https://agentskills.co.il/he/guides/github-verification-checklist):
+
+- **Secret scanning** *and* **push protection**. The checklist also requires zero open alerts.
+- **CodeQL default setup.** Deliberately *not* checked in as a workflow — enabling default setup
+  conflicts with a committed `codeql.yml` advanced-setup workflow, and the checklist asks for
+  default setup specifically.
+
+## Releasing (maintainers)
+
+`.github/workflows/release.yml` fires on any `v*` tag and does everything: runs the tests, refuses
+a tag that disagrees with `package.json`, builds the tarball once, attests it with
+[`actions/attest-build-provenance`](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations),
+creates the GitHub release, and publishes that same tarball to npm with `--provenance`.
+
+```bash
+npm version patch          # bumps package.json and creates the vX.Y.Z tag
+git push --follow-tags
+```
+
+npm publishing is skipped with a notice if the `NPM_TOKEN` repository secret is absent; the GitHub
+release and its attestation still happen. Verify a published artifact with:
+
+```bash
+gh attestation verify icount-mcp-<version>.tgz -R davidkotler/icount-mcp
+```
+
+Re-tagging a released version will not work — the tag ruleset blocks moving and deleting `v*` tags.
+Cut a new patch version instead.
