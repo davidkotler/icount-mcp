@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
 
+# A force-push to a PR should not leave the previous run burning minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -18,6 +23,8 @@ jobs:
         node: [18.x, 20.x, 22.x]
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
@@ -30,6 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22.x
@@ -48,3 +57,17 @@ jobs:
             const bad = f.filter(p => /(^|\/)\.env$|\.idea|node_modules|\.git\//.test(p));
             if (bad.length) { console.error('must not be published:', bad); process.exit(1); }
           "
+
+  # Single required status check for the `main` ruleset: the 9-way test matrix
+  # and the packaging job all funnel into this one context, so branch
+  # protection does not have to name each matrix leg.
+  ci-ok:
+    if: always()
+    needs: [test, packaging]
+    runs-on: ubuntu-latest
+    steps:
+      - name: every required job succeeded
+        run: |
+          echo "test=${{ needs.test.result }} packaging=${{ needs.packaging.result }}"
+          [ "${{ needs.test.result }}" = "success" ] || exit 1
+          [ "${{ needs.packaging.result }}" = "success" ] || exit 1

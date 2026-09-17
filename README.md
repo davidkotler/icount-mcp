@@ -197,6 +197,16 @@ leave your client's approval prompts on. Full threat model in [SECURITY.md](SECU
 - `doc/update_doc_income_type`, `doc/list` (superseded here by the more flexible `doc/search`)
 - Expenses, suppliers, inventory, CRM, and time-tracking modules (separate iCount API areas entirely)
 
+## Contributing
+
+PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup, how to verify a change against a
+live account without wrecking it, and what CI enforces. `main` is protected: fork, branch, and open
+a PR. Please also read the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+Security issues go to a
+[private advisory](https://github.com/davidkotler/icount-mcp/security/advisories/new), never a
+public issue.
+
 ## License
 
 MIT
