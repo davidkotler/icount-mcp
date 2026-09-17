@@ -63,7 +63,7 @@ claude mcp add icount --env ICOUNT_API_TOKEN=API3E8-... -- npx -y icount-mcp
 `npx -y icount-mcp` always runs the latest published version. To pin:
 
 ```json
-{ "command": "npx", "args": ["-y", "icount-mcp@0.3.0"] }
+{ "command": "npx", "args": ["-y", "icount-mcp@0.3.1"] }
 ```
 
 Or install it once, globally, and skip the npx download entirely:
@@ -117,7 +117,7 @@ basic account/API info.
 |---|---|---|
 | `icount_test_connection` | Verify the token works | read |
 | `icount_create_document` | Create an invoice, receipt, order, offer, etc. | write |
-| `icount_search_documents` | Search documents by type, status, client, date range | read |
+| `icount_search_documents` | Search documents by type, status, client, date range (needs ≥1 filter) | read |
 | `icount_get_document` | Fetch full details of one document | read |
 | `icount_cancel_document` | Cancel a document (iCount has no hard delete) | ⚠️ **irreversible** |
 | `icount_close_document` | Mark a document closed/paid | write |
@@ -133,7 +133,7 @@ basic account/API info.
 | `icount_get_client` | Fetch a client's details | read |
 | `icount_list_clients` | List clients (bounded — returns `{ total, returned, clients }`) | read |
 | `icount_delete_client` | **Really** delete a client — no cancel-only restriction here | ⚠️ **irreversible** |
-| `icount_get_client_open_docs` | A client's outstanding/unpaid documents | read |
+| `icount_get_client_open_docs` | One client's outstanding/unpaid documents (needs a client id/email/name) | read |
 
 Every tool carries MCP [tool annotations](https://modelcontextprotocol.io/specification/server/tools)
 (`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`), so a well-behaved client
@@ -160,6 +160,19 @@ even though the *client* record may already have been created as a side effect b
 `payment.method` is one of `cash`, `creditcard`, `cheque`, `banktransfer`. For testing purposes, prefer
 `order` or `offer` doctypes instead — they're non-tax documents with no payment requirement, and (like
 all iCount documents) can't be hard-deleted, only cancelled.
+
+## Search quirks
+
+iCount's `doc/search` has two behaviours worth knowing about, both verified against a live account:
+
+- **At least one filter is required.** An unfiltered search is rejected; pass a `doctype`, client,
+  `docnum`, or date range. This server catches that locally, without a wasted round trip.
+- **A very broad date range can be refused** with `too_many_results`. Narrow the range or add
+  filters — `maxResults` does *not* raise iCount's server-side limit.
+
+A search that legitimately matches nothing returns `{ "docs": [], "matched": 0 }`. iCount itself
+reports that case as a failure; this server normalises it to an empty result so your agent doesn't
+conclude something broke.
 
 ## Development notes / how this was verified
 

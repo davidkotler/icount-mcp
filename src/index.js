@@ -185,7 +185,10 @@ server.registerTool(
   {
     title: "Search documents",
     description:
-      "Search existing iCount documents by type, status, client, date range, or document number.",
+      "Search existing iCount documents by type, status, client, date range, or document number. " +
+      "At least one filter is required. A search that matches nothing returns `{ docs: [], matched: 0 }` " +
+      "— that is a normal empty result, not an error. A very broad date range can be rejected as " +
+      "`too_many_results`; narrow it rather than raising maxResults, which does not lift that limit.",
     inputSchema: {
       doctype: z.enum(DOCTYPES).optional(),
       status: z
@@ -423,14 +426,15 @@ server.registerTool(
   {
     title: "Get client open documents",
     description:
-      "List a client's open (unpaid/unsettled) documents — their outstanding balance. Omit clientId to " +
-      "get open documents across all clients.",
+      "List one client's open (unpaid/unsettled) documents — their outstanding balance. Requires a " +
+      "client: pass clientId (preferred), email, or clientName. There is no all-clients mode; for " +
+      "that, use icount_search_documents with status 0.",
     inputSchema: {
-      clientId: z.string().optional(),
+      clientId: z.string().optional().describe("Preferred identifier, from icount_list_clients"),
       doctype: z.enum(DOCTYPES).optional(),
       getItems: z.boolean().optional().describe("Include line items on each document"),
-      email: z.string().optional().describe("Filter by client email instead of id"),
-      clientName: z.string().optional().describe("Filter by client name instead of id"),
+      email: z.string().optional().describe("Identify the client by email instead of id"),
+      clientName: z.string().optional().describe("Identify the client by exact name instead of id"),
     },
     annotations: READ_ONLY,
   },

@@ -76,6 +76,48 @@ test("redaction never corrupts a successful response body", async () => {
   assert.deepEqual(data, { status: true, data: { client_name: "Test Ltd" } });
 });
 
+test("an empty search result is not an error", async () => {
+  // Regression: iCount answers "nothing matched" with status:false /
+  // no_results_found. Treating that as a failure told the agent the server was
+  // broken every time a legitimate search came up empty.
+  process.env.ICOUNT_API_TOKEN = "API3E8-AAAA-BBBB-CCCC";
+  stubFetch(() => jsonResponse({ status: false, reason: "no_results_found" }));
+
+  const result = await icount.searchDocuments({ doctype: "offer" });
+  assert.deepEqual(result, { docs: [], matched: 0 });
+});
+
+test("an unfiltered search fails locally, without a round trip", async () => {
+  process.env.ICOUNT_API_TOKEN = "API3E8-AAAA-BBBB-CCCC";
+  const calls = stubFetch(() => jsonResponse({ status: true }));
+
+  await assert.rejects(() => icount.searchDocuments({}), /at least one filter/);
+  assert.equal(calls.length, 0, "must not call the API with an empty query");
+});
+
+test("opaque reason codes carry actionable guidance", async () => {
+  process.env.ICOUNT_API_TOKEN = "API3E8-AAAA-BBBB-CCCC";
+  stubFetch(() => jsonResponse({ status: false, reason: "too_many_results" }));
+
+  await assert.rejects(
+    () => icount.searchDocuments({ startDate: "2020-01-01" }),
+    /Narrow the date range/
+  );
+});
+
+test("open docs requires a client identifier", async () => {
+  // Regression: this used to be documented as "omit clientId for all clients",
+  // but the live API answers `client_not_found`.
+  process.env.ICOUNT_API_TOKEN = "API3E8-AAAA-BBBB-CCCC";
+  const calls = stubFetch(() => jsonResponse({ status: true }));
+
+  await assert.rejects(() => icount.getClientOpenDocs({}), /needs a client/);
+  assert.equal(calls.length, 0);
+
+  await icount.getClientOpenDocs({ clientId: "42" });
+  assert.equal(calls.length, 1, "a clientId must still go through");
+});
+
 test("an HTTP 200 with status:false is still an error", async () => {
   process.env.ICOUNT_API_TOKEN = "API3E8-AAAA-BBBB-CCCC";
   stubFetch(() => jsonResponse({ status: false, error_description: "יצירת המסמך נכשלה" }));

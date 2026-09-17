@@ -14,13 +14,32 @@ const MAX_TIMEOUT_MS = 300_000;
 // LLM context window.
 const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
+// Reason codes iCount returns with `status: false` that are not actually
+// failures. An empty result set is the normal answer to a query that matched
+// nothing, and must not surface to the agent as an error.
+const BENIGN_REASONS = new Set(["no_results_found"]);
+
+// iCount's reason codes are terse and untranslated. Attach guidance the caller
+// — usually a language model — can act on instead of guessing.
+const REASON_GUIDANCE = {
+  empty_query:
+    "iCount requires at least one search filter. Pass a doctype, client, docnum, or date range.",
+  too_many_results:
+    "The query matched more documents than iCount will return. Narrow the date range or add " +
+    "filters; maxResults does not raise this server-side limit.",
+  client_not_found:
+    "No matching client. Pass a clientId from icount_list_clients, or an email/clientName that " +
+    "matches an existing client exactly.",
+};
+
 /** Error carrying the HTTP status, so callers can tell auth from validation failures. */
 export class IcountApiError extends Error {
-  constructor(message, { status, body } = {}) {
+  constructor(message, { status, body, reason } = {}) {
     super(message);
     this.name = "IcountApiError";
     this.status = status;
     this.body = body;
+    this.reason = reason;
   }
 }
 
@@ -117,11 +136,22 @@ async function icountRequest(method, path, body) {
 
   // iCount signals application-level failures with `status: false` and HTTP 200.
   if (!res.ok || data?.status === false) {
+    const reason = typeof data?.reason === "string" ? data.reason : undefined;
+
+    // ...but it also uses that channel for "nothing matched", which is an
+    // ordinary outcome, not a failure. Throwing here told the agent the server
+    // was broken every time a search legitimately came up empty.
+    if (res.ok && reason && BENIGN_REASONS.has(reason)) {
+      return data;
+    }
+
     const message =
       data?.error_description || data?.reason || data?.message || data?.error || JSON.stringify(data);
+    const guidance = reason ? REASON_GUIDANCE[reason] : undefined;
     throw new IcountApiError(
-      `iCount API error (HTTP ${res.status}): ${redact(String(message), token)}`,
-      { status: res.status, body: data }
+      `iCount API error (HTTP ${res.status}): ${redact(String(message), token)}` +
+        (guidance ? ` — ${guidance}` : ""),
+      { status: res.status, body: data, reason }
     );
   }
 
@@ -231,13 +261,31 @@ export function createDocument(params) {
   return icountRequest("POST", "/api/v3.php/doc/create", body);
 }
 
-export function searchDocuments(filters) {
+export async function searchDocuments(filters) {
   const { maxResults, detailLevel, ...rest } = filters ?? {};
-  return icountRequest("POST", "/api/v3.php/doc/search", {
-    ...clean(rest),
+  const criteria = clean(rest);
+
+  // iCount rejects an unfiltered search with an opaque `empty_query`. Catch it
+  // here so the agent gets a useful message without spending a round trip.
+  if (Object.keys(criteria).length === 0) {
+    throw new IcountApiError(
+      "A document search needs at least one filter — pass a doctype, client, docnum, or date range."
+    );
+  }
+
+  const data = await icountRequest("POST", "/api/v3.php/doc/search", {
+    ...criteria,
     max_results: maxResults ?? 100,
     detail_level: detailLevel ?? 1,
   });
+
+  // "Nothing matched" comes back as status:false/no_results_found. Normalise it
+  // to the same `docs` key a successful search uses, so callers see an empty
+  // list rather than an error or a differently-shaped object.
+  if (data?.status === false) {
+    return { docs: [], matched: 0 };
+  }
+  return data;
 }
 
 export function getDocument({ doctype, docnum, getItems, getPayments, getPdfLink }) {
@@ -362,7 +410,18 @@ export function deleteClient({ clientId }) {
   return icountRequest("POST", "/api/v3.php/client/delete", { client_id: clientId });
 }
 
-export function getClientOpenDocs({ clientId, doctype, getItems, email, clientName }) {
+// async so the guard below surfaces as a rejection, like every other failure
+// path in this module, rather than a synchronous throw.
+export async function getClientOpenDocs({ clientId, doctype, getItems, email, clientName }) {
+  // Verified against the live API: calling this without a client identifier
+  // returns `client_not_found`, not open documents across all clients. Earlier
+  // versions documented the opposite and sent agents down a dead end.
+  if (!clientId && !email && !clientName) {
+    throw new IcountApiError(
+      "icount_get_client_open_docs needs a client: pass clientId (preferred), email, or clientName. " +
+        "There is no all-clients mode — use icount_search_documents with status 0 for that."
+    );
+  }
   return icountRequest(
     "POST",
     "/api/v3.php/client/get_open_docs",
