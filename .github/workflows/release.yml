@@ -55,14 +55,19 @@ jobs:
           subject-path: |
             ${{ steps.pack.outputs.file }}
 
-      - name: create GitHub release
+      # Idempotent: a re-run for an already-released tag must not fail here,
+      # or the npm publish step below becomes unreachable.
+      - name: create or update GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          ASSET: ${{ steps.pack.outputs.file }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "$GITHUB_REF_NAME" \
-            --generate-notes \
-            "${{ steps.pack.outputs.file }}"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "release $GITHUB_REF_NAME already exists - replacing its asset"
+            gh release upload "$GITHUB_REF_NAME" "$ASSET" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes "$ASSET"
+          fi
 
       - name: publish to npm
         env:
