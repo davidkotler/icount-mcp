@@ -1,0 +1,5 @@
+# The npm bin entry must keep its LF shebang, or `npx icount-mcp` breaks on
+# macOS/Linux when published from a Windows checkout.
+* text=auto eol=lf
+*.png binary
+*.jpg binary

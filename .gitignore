@@ -1,4 +1,9 @@
 .env
+.env.*
+!.env.example
 node_modules/
 *.tgz
+*.log
 .idea/
+.DS_Store
+coverage/

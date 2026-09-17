@@ -1,9 +1,8 @@
 {
   "name": "icount-mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "MCP server for the iCount (Israeli accounting/invoicing) API — documents and clients, over stdio",
   "type": "module",
-  "main": "src/index.js",
   "license": "MIT",
   "author": "davidkotler",
   "homepage": "https://github.com/davidkotler/icount-mcp#readme",
@@ -26,7 +25,7 @@
     "israel"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=18.17"
   },
   "bin": {
     "icount-mcp": "src/index.js"
@@ -35,14 +34,17 @@
     "src",
     ".env.example",
     "README.md",
+    "SECURITY.md",
     "LICENSE"
   ],
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test": "node --test test/client.test.js test/server.test.js",
+    "prepublishOnly": "npm test"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
-    "dotenv": "^16.4.5",
-    "zod": "^3.23.8"
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "dotenv": "^16.6.1",
+    "zod": "^3.25.76"
   }
 }

@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [18.x, 20.x, 22.x]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm test
+      - run: npm audit --audit-level=high
+
+  # Catch the classic npx-on-Linux break: a CRLF shebang in the bin entry.
+  packaging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - run: npm ci
+      - name: bin entry has an LF shebang
+        run: |
+          head -c 2 src/index.js | grep -q '#!' || { echo "missing shebang"; exit 1; }
+          head -1 src/index.js | grep -q $'\r' && { echo "CRLF shebang would break npx"; exit 1; }
+          exit 0
+      - name: published tarball contains no secrets
+        run: |
+          npm pack --dry-run --json > files.json
+          node -e "
+            const f = require('./files.json')[0].files.map(x => x.path);
+            console.log(f.join('\n'));
+            const bad = f.filter(p => /(^|\/)\.env$|\.idea|node_modules|\.git\//.test(p));
+            if (bad.length) { console.error('must not be published:', bad); process.exit(1); }
+          "

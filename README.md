@@ -10,6 +10,10 @@ Runs as a local **stdio** server — no hosting, no OAuth flow, just a static AP
 > Unofficial, community-built integration. Not affiliated with or endorsed by iCount. You are
 > responsible for the documents and data this creates in your own iCount account.
 
+> **Keep your MCP client's tool-approval prompts on for this server.** It acts on real financial
+> records, and `icount_cancel_document` / `icount_delete_client` are irreversible. See
+> [SECURITY.md](SECURITY.md).
+
 ## Requirements
 
 - Node.js 18+
@@ -59,7 +63,7 @@ claude mcp add icount --env ICOUNT_API_TOKEN=API3E8-... -- npx -y icount-mcp
 `npx -y icount-mcp` always runs the latest published version. To pin:
 
 ```json
-{ "command": "npx", "args": ["-y", "icount-mcp@0.2.0"] }
+{ "command": "npx", "args": ["-y", "icount-mcp@0.3.0"] }
 ```
 
 Or install it once, globally, and skip the npx download entirely:
@@ -85,9 +89,20 @@ cp .env.example .env    # then paste your token into it
 { "command": "node", "args": ["/absolute/path/to/icount-mcp/src/index.js"] }
 ```
 
+```bash
+npm test    # offline: no iCount account or network needed
+```
+
 The token can come from either the `env` block or a `.env` file — the `env` block wins when both are
 set. A `.env` is looked for next to the package and in the working directory; with `npx` you'll want
 the `env` block.
+
+### Configuration
+
+| Variable | Required | Default | What it does |
+|---|---|---|---|
+| `ICOUNT_API_TOKEN` | yes | — | Your iCount API v3 token |
+| `ICOUNT_TIMEOUT_MS` | no | `30000` | Per-request timeout, clamped to 1s–300s |
 
 ### Verify it's working
 
@@ -98,27 +113,31 @@ basic account/API info.
 
 ### Documents
 
-| Tool | What it does |
-|---|---|
-| `icount_test_connection` | Verify the token works |
-| `icount_create_document` | Create an invoice, receipt, order, offer, etc. |
-| `icount_search_documents` | Search documents by type, status, client, date range |
-| `icount_get_document` | Fetch full details of one document |
-| `icount_cancel_document` | Cancel a document (irreversible — iCount has no hard delete) |
-| `icount_close_document` | Mark a document closed/paid |
-| `icount_convert_document` | Convert a document to another type (e.g. offer → order) |
-| `icount_get_document_url` | Get a printable/viewable PDF URL |
+| Tool | What it does | |
+|---|---|---|
+| `icount_test_connection` | Verify the token works | read |
+| `icount_create_document` | Create an invoice, receipt, order, offer, etc. | write |
+| `icount_search_documents` | Search documents by type, status, client, date range | read |
+| `icount_get_document` | Fetch full details of one document | read |
+| `icount_cancel_document` | Cancel a document (iCount has no hard delete) | ⚠️ **irreversible** |
+| `icount_close_document` | Mark a document closed/paid | write |
+| `icount_convert_document` | Convert a document to another type (e.g. offer → order) | write |
+| `icount_get_document_url` | Get a printable/viewable PDF URL | read |
 
 ### Clients
 
-| Tool | What it does |
-|---|---|
-| `icount_create_client` | Create a client record directly (no document) |
-| `icount_update_client` | Update an existing client's fields |
-| `icount_get_client` | Fetch a client's details |
-| `icount_list_clients` | List clients in the account |
-| `icount_delete_client` | **Really** delete a client (unlike documents, this has no cancel-only restriction) |
-| `icount_get_client_open_docs` | A client's outstanding/unpaid documents |
+| Tool | What it does | |
+|---|---|---|
+| `icount_create_client` | Create a client record directly (no document) | write |
+| `icount_update_client` | Update an existing client's fields | write |
+| `icount_get_client` | Fetch a client's details | read |
+| `icount_list_clients` | List clients (bounded — returns `{ total, returned, clients }`) | read |
+| `icount_delete_client` | **Really** delete a client — no cancel-only restriction here | ⚠️ **irreversible** |
+| `icount_get_client_open_docs` | A client's outstanding/unpaid documents | read |
+
+Every tool carries MCP [tool annotations](https://modelcontextprotocol.io/specification/server/tools)
+(`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`), so a well-behaved client
+knows which calls are safe to run without asking and which need your confirmation.
 
 Document types (`doctype`): `invoice`, `invrec` (חשבונית מס-קבלה), `receipt`, `refund`, `order`, `offer`,
 `delivery`, `deal`.
@@ -150,6 +169,13 @@ against the open-source [n8n-nodes-icount](https://github.com/binesamit/n8n-node
 licensed) and then **empirically verified against a live iCount account**: every tool in this server was
 exercised end-to-end (including a full create → update → delete client lifecycle, and a real receipt
 creation + cancellation) before being shipped.
+
+## Security
+
+Short version: this is a local stdio server that talks only to a hardcoded `https://api.icount.co.il`,
+never logs your token, redacts it from error messages, times out every request, and keeps stdout
+reserved for JSON-RPC. It adds **no confirmation step of its own** — the model can call every tool, so
+leave your client's approval prompts on. Full threat model in [SECURITY.md](SECURITY.md).
 
 ## Roadmap / not yet implemented
 
