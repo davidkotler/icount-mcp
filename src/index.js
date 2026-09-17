@@ -7,11 +7,15 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import * as icount from "./icount-client.js";
 
-// Load .env from this package's own directory, not the caller's cwd, so the
-// server works the same whether launched via `npm start`, MCP Inspector, or
-// registered in another tool's config with an arbitrary working directory.
+// Load .env from this package's own directory first (the git-clone install),
+// then from the caller's cwd, so the server works the same whether launched via
+// `npm start`, `npx icount-mcp`, MCP Inspector, or registered in another tool's
+// config with an arbitrary working directory. Neither file is required: dotenv
+// ignores a missing path, and it never overrides variables already in the
+// environment, so an `env` block in the MCP client config always wins.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 config({ path: path.join(__dirname, "..", ".env") });
+config();
 
 // Non-tax document types (offer, order, delivery, deal) are safe to create
 // repeatedly while testing since they don't carry the same audit/cancellation

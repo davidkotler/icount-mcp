@@ -27,25 +27,15 @@ This is iCount API v3, which authenticates with a single static Bearer token —
 
 ## Install
 
-```bash
-git clone <this-repo-url> icount-mcp
-cd icount-mcp
-npm install
-cp .env.example .env
-# then edit .env and paste your token:
-#   ICOUNT_API_TOKEN=API3E8-...
-```
-
-## Configure in your MCP client
-
-Add to your client's MCP config (e.g. `.mcp.json`, Claude Desktop's `claude_desktop_config.json`, etc.):
+Nothing to clone or install — `npx` fetches and runs it on demand. Just add it to your MCP client
+config with your token:
 
 ```json
 {
   "mcpServers": {
     "icount": {
-      "command": "node",
-      "args": ["/absolute/path/to/icount-mcp/src/index.js"],
+      "command": "npx",
+      "args": ["-y", "icount-mcp"],
       "env": {
         "ICOUNT_API_TOKEN": "API3E8-XXXXXXXX-XXXXXXXX-XXXXXXXXXXXXXXXX"
       }
@@ -54,16 +44,50 @@ Add to your client's MCP config (e.g. `.mcp.json`, Claude Desktop's `claude_desk
 }
 ```
 
-You can set the token either in `.env` inside this folder, or via the `env` block above — either works;
-`.env` is loaded relative to this package's own directory regardless of your client's working directory.
+That file is `.mcp.json` in your project (Claude Code), `claude_desktop_config.json` (Claude Desktop),
+`~/.cursor/mcp.json` (Cursor), or the equivalent for your client. On Windows, some clients need
+`"command": "npx.cmd"`.
 
 ### Claude Code
 
 ```bash
-claude mcp add icount -- node /absolute/path/to/icount-mcp/src/index.js
+claude mcp add icount --env ICOUNT_API_TOKEN=API3E8-... -- npx -y icount-mcp
 ```
 
-(then set `ICOUNT_API_TOKEN` in `.env` as above, since `claude mcp add` doesn't take env vars inline).
+### Pin a version
+
+`npx -y icount-mcp` always runs the latest published version. To pin:
+
+```json
+{ "command": "npx", "args": ["-y", "icount-mcp@0.2.0"] }
+```
+
+Or install it once, globally, and skip the npx download entirely:
+
+```bash
+npm install -g icount-mcp
+```
+
+```json
+{ "command": "icount-mcp", "env": { "ICOUNT_API_TOKEN": "API3E8-..." } }
+```
+
+### From source (development)
+
+```bash
+git clone https://github.com/davidkotler/icount-mcp.git
+cd icount-mcp
+npm install
+cp .env.example .env    # then paste your token into it
+```
+
+```json
+{ "command": "node", "args": ["/absolute/path/to/icount-mcp/src/index.js"] }
+```
+
+The token can come from either the `env` block or a `.env` file — the `env` block wins when both are
+set. A `.env` is looked for next to the package and in the working directory; with `npx` you'll want
+the `env` block.
 
 ### Verify it's working
 

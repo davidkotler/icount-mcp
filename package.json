@@ -6,12 +6,23 @@
   "main": "src/index.js",
   "license": "MIT",
   "author": "davidkotler",
+  "homepage": "https://github.com/davidkotler/icount-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davidkotler/icount-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/davidkotler/icount-mcp/issues"
+  },
   "keywords": [
     "mcp",
     "model-context-protocol",
+    "modelcontextprotocol",
+    "mcp-server",
     "icount",
     "accounting",
     "invoicing",
+    "invoice",
     "israel"
   ],
   "engines": {
@@ -23,7 +34,8 @@
   "files": [
     "src",
     ".env.example",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "start": "node src/index.js"
