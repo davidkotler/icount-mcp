@@ -7,3 +7,5 @@ node_modules/
 .idea/
 .DS_Store
 coverage/
+pack.json
+files.json
