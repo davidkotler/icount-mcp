@@ -9,3 +9,5 @@ node_modules/
 coverage/
 pack.json
 files.json
+.wrangler/
+.dev.vars

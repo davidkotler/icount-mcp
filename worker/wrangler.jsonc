@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "icount-mcp",
+  "main": "src/index.js",
+  "compatibility_date": "2025-03-01",
+  // node:async_hooks (AsyncLocalStorage) is used to scope each caller's
+  // iCount token to their own request — required for the multi-tenant
+  // per-request auth this Worker does.
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  }
+}

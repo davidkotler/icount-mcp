@@ -1,9 +1,18 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+
 // Thin, dependency-free wrapper around the iCount v3 REST API.
 //
 // The base URL is deliberately hardcoded rather than read from the environment:
 // every request carries a bearer token, and letting an env var redirect that
 // traffic would turn a poisoned environment into a token-exfiltration channel.
 const BASE_URL = "https://api.icount.co.il";
+
+// Lets a multi-tenant HTTP host (the Cloudflare Worker deployment, where each
+// request carries a different caller's token) scope the token/timeout to the
+// current request without a shared mutable global racing across concurrent
+// requests in the same isolate. The stdio server never touches this — it has
+// exactly one caller and always resolves from process.env, as before.
+export const requestConfig = new AsyncLocalStorage();
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MIN_TIMEOUT_MS = 1_000;
@@ -44,7 +53,8 @@ export class IcountApiError extends Error {
 }
 
 function getToken() {
-  const token = process.env.ICOUNT_API_TOKEN?.trim();
+  const fromRequest = requestConfig.getStore()?.token;
+  const token = (fromRequest ?? process.env.ICOUNT_API_TOKEN)?.trim();
   if (!token) {
     throw new Error(
       "ICOUNT_API_TOKEN is not set. Pass it in the `env` block of your MCP client config, " +
@@ -55,7 +65,8 @@ function getToken() {
 }
 
 function getTimeoutMs() {
-  const raw = Number(process.env.ICOUNT_TIMEOUT_MS);
+  const fromRequest = requestConfig.getStore()?.timeoutMs;
+  const raw = Number(fromRequest ?? process.env.ICOUNT_TIMEOUT_MS);
   if (!Number.isFinite(raw)) return DEFAULT_TIMEOUT_MS;
   return Math.min(Math.max(raw, MIN_TIMEOUT_MS), MAX_TIMEOUT_MS);
 }
